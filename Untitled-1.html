@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Dodge Game 🚗</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            background: #20232a;
+            color: #fff;
+            text-align: center;
+        }
+
+        #game-menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        #game-menu button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        #game-area {
+            display: none;
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background: linear-gradient(to bottom, #282c34, #606060);
+            overflow: hidden;
+        }
+
+        .car {
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            width: 50px;
+            height: 80px;
+            background: red;
+            border-radius: 5px;
+            transform: translateX(-50%);
+        }
+
+        .obstacle, .coin {
+            position: absolute;
+            top: -100px;
+            width: 50px;
+            height: 80px;
+            border-radius: 5px;
+        }
+
+        .obstacle {
+            background: yellow;
+        }
+
+        .coin {
+            background: gold;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-menu">
+        <h1>Car Dodge Game 🚗</h1>
+        <p>Select difficulty:</p>
+        <button onclick="startGame(3)">Easy</button>
+        <button onclick="startGame(5)">Medium</button>
+        <button onclick="startGame(8)">Hard</button>
+    </div>
+
+    <div id="game-area">
+        <div id="score">Score: 0</div>
+        <div id="player-car" class="car"></div>
+    </div>
+
+    <script>
+        const gameArea = document.getElementById('game-area');
+        const playerCar = document.getElementById('player-car');
+        const scoreDisplay = document.getElementById('score');
+        let obstacles = [];
+        let coins = [];
+        let gameInterval;
+        let obstacleInterval;
+        let coinInterval;
+        let score = 0;
+        let speed = 3;
+        let isGameRunning = false;
+        let timeSurvived = 0;
+
+        function startGame(levelSpeed) {
+            speed = levelSpeed;
+            document.getElementById('game-menu').style.display = 'none';
+            gameArea.style.display = 'block';
+            isGameRunning = true;
+            score = 0;
+            timeSurvived = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            playerCar.style.left = '50%';
+            obstacles = [];
+            coins = [];
+
+            gameInterval = setInterval(updateGame, 20);
+            obstacleInterval = setInterval(createObstacle, 2000);
+            coinInterval = setInterval(createCoin, 3000);
+        }
+
+        function createObstacle() {
+            const obstacle = document.createElement('div');
+            obstacle.classList.add('obstacle');
+            obstacle.style.left = Math.random() * (gameArea.offsetWidth - 50) + 'px';
+            gameArea.appendChild(obstacle);
+            obstacles.push(obstacle);
+        }
+
+        function createCoin() {
+            const coin = document.createElement('div');
+            coin.classList.add('coin');
+            coin.style.left = Math.random() * (gameArea.offsetWidth - 30) + 'px';
+            gameArea.appendChild(coin);
+            coins.push(coin);
+        }
+
+        function updateGame() {
+            if (!isGameRunning) return;
+
+            timeSurvived += 1;
+            if (timeSurvived % 100 === 0) speed += 0.5; // Increase speed every few seconds.
+
+            obstacles.forEach((obstacle, index) => {
+                let currentTop = parseFloat(obstacle.style.top || '-100');
+                obstacle.style.top = currentTop + speed + 'px';
+
+                // Change obstacle color based on time survived
+                if (timeSurvived > 300) {
+                    obstacle.style.background = 'orange';
+                }
+                if (timeSurvived > 600) {
+                    obstacle.style.background = 'red';
+                }
+
+                // Check collision
+                if (isCollision(playerCar, obstacle)) {
+                    endGame();
+                }
+
+                // Remove out-of-bounds obstacles
+                if (currentTop > gameArea.offsetHeight) {
+                    obstacle.remove();
+                    obstacles.splice(index, 1);
+                }
+            });
+
+            coins.forEach((coin, index) => {
+                let currentTop = parseFloat(coin.style.top || '-100');
+                coin.style.top = currentTop + speed + 'px';
+
+                // Check coin collection
+                if (isCollision(playerCar, coin)) {
+                    score += 10;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    coin.remove();
+                    coins.splice(index, 1);
+                }
+
+                // Remove out-of-bounds coins
+                if (currentTop > gameArea.offsetHeight) {
+                    coin.remove();
+                    coins.splice(index, 1);
+                }
+            });
+        }
+
+        function isCollision(car, obj) {
+            const carRect = car.getBoundingClientRect();
+            const objRect = obj.getBoundingClientRect();
+
+            return (
+                carRect.left < objRect.right &&
+                carRect.right > objRect.left &&
+                carRect.top < objRect.bottom &&
+                carRect.bottom > objRect.top
+            );
+        }
+
+        function endGame() {
+            clearInterval(gameInterval);
+            clearInterval(obstacleInterval);
+            clearInterval(coinInterval);
+            isGameRunning = false;
+            alert(`Game Over! Final Score: ${score}`);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!isGameRunning) return;
+
+            const carLeft = parseFloat(playerCar.style.left || '50%');
+            if (e.key === 'ArrowLeft' && carLeft > 5) {
+                playerCar.style.left = carLeft - 5 + '%';
+            }
+            if (e.key === 'ArrowRight' && carLeft < 95) {
+                playerCar.style.left = carLeft + 5 + '%';
+            }
+        });
+    </script>
+</body>
+</html>
